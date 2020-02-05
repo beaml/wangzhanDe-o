@@ -15,9 +15,10 @@ public class LoggerTests {
     @Test
     public void testLogger(){
         System.out.println(logger.getName());
-        logger.debug("debug log");
+        logger.debug("debug log!");
         logger.info("info log");
         logger.warn("warn log");
         logger.error("error log");
+        System.out.println();
     }
 }
