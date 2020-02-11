@@ -1,14 +1,17 @@
 package com.newcoder.community.controller;
 
 import com.newcoder.community.service.AlphaService;
+import com.newcoder.community.util.CommunityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
@@ -137,5 +140,47 @@ public class AlphaController {
 
         return  list;
     }
+    //cookie示例
+    @RequestMapping(path="/cookie/set",method = RequestMethod.GET)
+    @ResponseBody
+    public String setCookie(HttpServletResponse response){
+        //创建cookie并存到response里
+        //创建cookie
+        Cookie cookie=new Cookie("code", CommunityUtil.generateUUID());
+        //设置cookie生效的范围
+        cookie.setPath("/community/alpha");
+        //浏览器得到cookie之后默认存到内存中，当把浏览器关掉之后就没有了，再打开时没有。
+        //如果想让浏览器存cookie存的久一点，关了一段时间后再打开还是有效地。可以设置cookie生存时间
+        //会使得cookie存到硬盘里，直到生存时间到了才无效.单位是s
+        cookie.setMaxAge(60*10);
+        //发送cookie
+        response.addCookie(cookie);
+        return  "set cookie";
+    }
+    @RequestMapping(path="/cookie/get",method = RequestMethod.GET)
+    @ResponseBody
+    //使用注解从cookie中取key为code的cookie值
+    public String getCookie(@CookieValue("code")String code){
+        System.out.println(code);
+        return "get cookie";
+    }
+    //session示例
+    @RequestMapping(path="/session/set",method = RequestMethod.GET)
+    @ResponseBody
+    //session不用手动创建，只要声明，springMVC会自动创建,并注入进来
+    public String setSession(HttpSession session){
+        session.setAttribute("id",1);
+        session.setAttribute("name","testSession");
+        return "set session";
+    }
+    @RequestMapping(path="/session/get",method = RequestMethod.GET)
+    @ResponseBody
+    public String getSession(HttpSession session){
+        System.out.println(session.getAttribute("id"));
+        System.out.println(session.getAttribute("name"));
+        return "get session";
+    }
+
+
 
 }
