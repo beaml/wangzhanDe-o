@@ -1,7 +1,9 @@
 package com.newcoder.community.service;
 
 
+import com.newcoder.community.dao.LoginTicketMapper;
 import com.newcoder.community.dao.UserMapper;
+import com.newcoder.community.entity.LoginTicket;
 import com.newcoder.community.entity.User;
 import com.newcoder.community.util.CommuityConstant;
 import com.newcoder.community.util.CommunityUtil;
@@ -26,6 +28,8 @@ public class UserService implements CommuityConstant {
     private MailClient mailClient;
     @Autowired
     private TemplateEngine templateEngine;
+    @Autowired
+    private LoginTicketMapper loginTicketMapper;
 
     @Value("${community.path.domain}")
     private String domain;
@@ -105,6 +109,62 @@ public class UserService implements CommuityConstant {
         }else{
             return  ACTIVATION_FAILURE;
         }
+    }
+    public Map<String,Object> login(String username,String password,int expiredSeconds){
+        Map<String,Object> map=new HashMap<>();
+        //空值处理
+        if(StringUtils.isBlank(username)){
+            map.put("usernameMsg","用户名不能为空");
+            return map;
+        }
+        if(StringUtils.isBlank(password)){
+            map.put("passwordMsg","密码不能为空");
+            return map;
+        }
+        //都不为空时，验证内容的合法性
+        //判断该用户是否存在
+        User user=userMapper.selectByName(username);
+        if(user==null){
+            map.put("usernameMsg","该账号不存在");
+            return map;
+        }
+        //判断状态是否被激活
+        if(user.getStatus()==0){
+            map.put("usernameMsg","该账号未激活");
+            return  map;
+        }
+        //验证密码是否正确
+        password=CommunityUtil.md5(password+user.getSalt());
+        if(!user.getPassword().equals(password)){
+            map.put("passwordMsg","密码不正确");
+            return  map;
+        }
+        //以上都通过之后，发放登录凭证
+        LoginTicket loginTicket=new LoginTicket();
+        loginTicket.setUserId(user.getId());
+        loginTicket.setTicket(CommunityUtil.generateUUID());
+        loginTicket.setStatus(0);
+        loginTicket.setExpired(new Date(System.currentTimeMillis()+expiredSeconds*1000));
+        loginTicketMapper.insertLoginTicket(loginTicket);
+
+        map.put("ticket",loginTicket.getTicket());
+        return map;
+    }
+    //退出登录
+    public void loginOut(String ticket){
+        loginTicketMapper.updateLoginStatus(ticket,1);
+    }
+    //查询凭证
+    public LoginTicket findLoginTicket(String ticket){
+        return loginTicketMapper.selectByTicket(ticket);
+    }
+    //修改头像路径
+    public int updateHeader(int userId,String headUrl){
+        return userMapper.updateHeader(userId,headUrl);
+    }
+//修改密码
+    public int updatePwd(int id,String newPwd){
+        return userMapper.updatePassword(id,newPwd);
     }
 
 }
