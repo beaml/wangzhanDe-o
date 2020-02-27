@@ -15,4 +15,10 @@ public interface DiscussPostMapper {
     //帖子总行数，可以求得总页数.
     // 需要动态的传递一个参数条件，并且这个方法有且只有一个参数，且在<if>中使用。此时应当使用Param注解给userId参数取一个别名
     int selectDiscussPostRows(@Param("userId") int userId);
+    //增加帖子
+    int insertDiscussPost(DiscussPost discussPost);
+    //查询帖子详情
+    DiscussPost selectDiscussPostById(int id);
+
+
 }
