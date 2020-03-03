@@ -166,5 +166,9 @@ public class UserService implements CommuityConstant {
     public int updatePwd(int id,String newPwd){
         return userMapper.updatePassword(id,newPwd);
     }
+    //根据用户名查用户id
+    public User findUserByName(String name){
+        return userMapper.selectByName(name);
+    }
 
 }
