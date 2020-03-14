@@ -71,7 +71,7 @@ public class AlphaService {
         userMapper.insertUser(user);
         //新增帖子
         DiscussPost discussPost=new DiscussPost();
-        discussPost.setUserid(user.getId());
+        discussPost.setUserId(user.getId());
         discussPost.setTitle("alpha good");
         discussPost.setContent("alpha test shiwuguanli新人报道");
         discussPost.setCreateTime(new Date());
@@ -101,7 +101,7 @@ public class AlphaService {
                 userMapper.insertUser(user);
                 //新增帖子
                 DiscussPost discussPost=new DiscussPost();
-                discussPost.setUserid(user.getId());
+                discussPost.setUserId(user.getId());
                 discussPost.setTitle("a1 good");
                 discussPost.setContent("a1 test shiwuguanli新人报道");
                 discussPost.setCreateTime(new Date());
