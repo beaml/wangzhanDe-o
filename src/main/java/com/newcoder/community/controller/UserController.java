@@ -2,8 +2,10 @@ package com.newcoder.community.controller;
 
 import com.newcoder.community.annotation.LoginRequired;
 import com.newcoder.community.entity.User;
+import com.newcoder.community.service.FollowService;
 import com.newcoder.community.service.LikeService;
 import com.newcoder.community.service.UserService;
+import com.newcoder.community.util.CommuityConstant;
 import com.newcoder.community.util.CommunityUtil;
 import com.newcoder.community.util.HostHolder;
 import org.apache.commons.lang3.StringUtils;
@@ -26,7 +28,7 @@ import java.io.OutputStream;
 
 @Controller
 @RequestMapping("/user")
-public class UserController {
+public class UserController implements CommuityConstant {
     private static final Logger looger= LoggerFactory.getLogger(UserController.class);
     @Value("${community.path.upload}")
     private  String uploadPath;
@@ -35,13 +37,15 @@ public class UserController {
     @Value("${server.servlet.context-path}")
     private String contextPath;
 
+
     @Autowired
     private UserService userService;
     @Autowired
     private HostHolder hostHolder;
     @Autowired
     private LikeService likeService;
-
+    @Autowired
+    private FollowService followService;
     @LoginRequired
 
     @RequestMapping(path="/setting",method = RequestMethod.GET)
@@ -142,6 +146,19 @@ public class UserController {
         //点赞数量
         int likeCount=likeService.findUserLikeCount(userId);
         model.addAttribute("likeCount",likeCount);
+        //查询用户a关注数量
+        long followeeCount=followService.findFolloweeCount(userId,ENTITY_TYPE_USER);
+        model.addAttribute("followeeCount",followeeCount);
+        //查询用户a粉丝数量
+        long followerCount=followService.findFollowerCount(ENTITY_TYPE_USER,userId);
+        model.addAttribute("followerCount",followerCount);
+        //查询当前用户是否关注了a用户
+        boolean hasFollow=false;
+        if(hostHolder.getUser()!=null){
+            hasFollow=followService.hasFollowed(hostHolder.getUser().getId(),ENTITY_TYPE_USER,userId);
+        }
+        model.addAttribute("hasFollow",hasFollow);
         return "/site/profile";
     }
+
 }
