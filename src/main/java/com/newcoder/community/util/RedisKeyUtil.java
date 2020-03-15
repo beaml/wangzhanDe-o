@@ -11,6 +11,12 @@ public class RedisKeyUtil {
     private static final String PREFIX_FOLLOWEE="followee";
     //目标人
     private static final String PREFIX_FOLLOWER="follower";
+    //验证码
+    private static  final String PREFIX_KAPTCHA="kapacha";
+    //是否已登录的凭证
+    private static final String PREFIX_TICKET="ticket";
+    //用户信息
+    private static final String PREFIX_USER="user";
 
     //某个实体的赞
     //like:entity:entityType:entityId->set(userId)
@@ -31,5 +37,17 @@ public class RedisKeyUtil {
     //follower:entityType:entityId->zset(userId,now)
     public static  String getFollowerKey(int entityType,int entityId){
         return PREFIX_FOLLOWER+SPLIT+entityType+SPLIT+entityId;
+    }
+    //提供一个方法来拼出验证码的key。还没登录，还没有用户id，但是需要对固定的用户进行验证。加一个用户临时凭证
+    public static String getKaptchaKey(String owner){
+        return PREFIX_KAPTCHA+SPLIT+owner;
+    }
+    //提供一个拼出登录凭证的key的方法
+    public static String getTicketKey(String ticket){
+        return PREFIX_TICKET+SPLIT+ticket;
+    }
+    //用户key
+    public static String getUserKey(int userId){
+        return PREFIX_USER+SPLIT+userId;
     }
 }
