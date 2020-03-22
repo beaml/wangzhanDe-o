@@ -43,6 +43,17 @@ public class MessageService {
     public int readMessage(List<Integer> ids){
         return messageMapper.updateStatus(ids,1);
     }
-
+    //查询某主题下最新的通知
+    public Message findLatestNotice(int userId,String topic){
+        return messageMapper.selectLatestNotice(userId,topic);
+    }
+   //查询某个主题下通知的数量（包括已读和未读）
+    public int findNoticeCount(int userId,String topic){
+        return messageMapper.selectNoticeCount(userId,topic);
+    }
+    //找到某主题下未读消息数量，或者（topic参数为空时）查询所有主题未读消息的和
+    public int findNoticeUnreadCount(int userId,String topic){
+        return messageMapper.selectLetterUnreadCount(userId,topic);
+    }
 }
 

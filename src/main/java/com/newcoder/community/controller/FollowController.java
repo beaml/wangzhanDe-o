@@ -1,7 +1,9 @@
 package com.newcoder.community.controller;
 
+import com.newcoder.community.entity.Event;
 import com.newcoder.community.entity.Page;
 import com.newcoder.community.entity.User;
+import com.newcoder.community.event.EventProducer;
 import com.newcoder.community.service.FollowService;
 import com.newcoder.community.service.UserService;
 import com.newcoder.community.util.CommuityConstant;
@@ -26,6 +28,9 @@ public class FollowController implements CommuityConstant{
     private HostHolder hostHolder;
     @Autowired
     private UserService userService;
+    @Autowired
+    private EventProducer eventProducer;
+
     //关注操作在界面上是异步的，只进行局部刷新ResponseBody
     @RequestMapping(path = "/follow",method = RequestMethod.POST)
     @ResponseBody
@@ -33,6 +38,14 @@ public class FollowController implements CommuityConstant{
         User user=hostHolder.getUser();
 
         followService.follow(user.getId(),entityType,entityId);
+        //触发关注事件
+        Event event=new Event()
+                .setTopic(TOPIC_FOLLOE)
+                .setUserId(user.getId())
+                .setEntityType(entityType)
+                .setEntityId(entityId)
+                .setEntityUserId(entityId);
+        eventProducer.fireEvent(event);
         return CommunityUtil.getJSONString(0,"已关注");
     }
 
