@@ -1,7 +1,5 @@
 package com.newcoder.community.service;
 
-
-import com.newcoder.community.dao.LoginTicketMapper;
 import com.newcoder.community.dao.UserMapper;
 import com.newcoder.community.entity.LoginTicket;
 import com.newcoder.community.entity.User;
