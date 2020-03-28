@@ -20,4 +20,8 @@ public interface UserServiceFeign {
     User findUserByName(@RequestParam("name") String name);
     @PostMapping("/spring-user-my/user/registerByUser")
     Map<String,Object> registerByUser(User user);
+    @PostMapping("/spring-user-my/user/updateStateById")
+    void updateStateById(@RequestParam("userId")int userId,@RequestParam("state")int state);
+    @PostMapping("/spring-user-my/user/login")
+    Map<String,Object> login(@RequestParam("username")String username,@RequestParam("password")String password);
 }

@@ -1,7 +1,5 @@
 package com.newcoder.community.service;
 
-import com.newcoder.community.aspect.ServiceLogAspect;
-import com.newcoder.community.dao.UserMapper;
 import com.newcoder.community.entity.LoginTicket;
 import com.newcoder.community.entity.User;
 import com.newcoder.community.feign.UserServiceFeign;
@@ -9,7 +7,6 @@ import com.newcoder.community.util.CommuityConstant;
 import com.newcoder.community.util.CommunityUtil;
 import com.newcoder.community.util.MailClient;
 import com.newcoder.community.util.RedisKeyUtil;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,21 +17,15 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserService implements CommuityConstant {
     @Autowired
-    private UserMapper userMapper;
-    @Autowired
     private MailClient mailClient;
     @Autowired
     private TemplateEngine templateEngine;
-   // @Autowired
-    //private LoginTicketMapper loginTicketMapper;
     @Autowired
     private RedisTemplate redisTemplate;
     @Autowired
@@ -75,13 +66,15 @@ public class UserService implements CommuityConstant {
     }
     //激活，返回激活状态
     public int activation(int userId,String code){
-        User user=userMapper.selectById(userId);
+        //微服务优化User user=userMapper.selectById(userId);
+        User user=userServiceFeign.getUserById(userId);
         if(user.getStatus()==1){
             //已经被激活
             return ACTIVATION_REPEAT;
         }else if(user.getActivationCode().equals(code)){
             //激活成功
-            userMapper.updateState(userId,1);
+            //微服务优化userMapper.updateState(userId,1);
+            userServiceFeign.updateStateById(userId,1);
             clearCache(userId);
             return  ACTIVATION_SUCCESS;
         }else{
@@ -89,37 +82,14 @@ public class UserService implements CommuityConstant {
         }
     }
     public Map<String,Object> login(String username,String password,int expiredSeconds){
-        Map<String,Object> map=new HashMap<>();
-        //空值处理
-        if(StringUtils.isBlank(username)){
-            map.put("usernameMsg","用户名不能为空");
+        Map<String,Object> map=userServiceFeign.login(username,password);
+        if(!map.containsKey("null")){
             return map;
-        }
-        if(StringUtils.isBlank(password)){
-            map.put("passwordMsg","密码不能为空");
-            return map;
-        }
-        //都不为空时，验证内容的合法性
-        //判断该用户是否存在
-        User user=userMapper.selectByName(username);
-        if(user==null){
-            map.put("usernameMsg","该账号不存在");
-            return map;
-        }
-        //判断状态是否被激活
-        if(user.getStatus()==0){
-            map.put("usernameMsg","该账号未激活");
-            return  map;
-        }
-        //验证密码是否正确
-        password=CommunityUtil.md5(password+user.getSalt());
-        if(!user.getPassword().equals(password)){
-            map.put("passwordMsg","密码不正确");
-            return  map;
         }
         //以上都通过之后，发放登录凭证
         LoginTicket loginTicket=new LoginTicket();
-        loginTicket.setUserId(user.getId());
+        loginTicket.setUserId(userServiceFeign.findUserByName(username).getId());
+
         loginTicket.setTicket(CommunityUtil.generateUUID());
         loginTicket.setStatus(0);
         loginTicket.setExpired(new Date(System.currentTimeMillis()+expiredSeconds*1000));
