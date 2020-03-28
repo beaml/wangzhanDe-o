@@ -1,13 +1,17 @@
 package com.newcoder.community.service;
 
+import com.newcoder.community.aspect.ServiceLogAspect;
 import com.newcoder.community.dao.UserMapper;
 import com.newcoder.community.entity.LoginTicket;
 import com.newcoder.community.entity.User;
+import com.newcoder.community.feign.UserServiceFeign;
 import com.newcoder.community.util.CommuityConstant;
 import com.newcoder.community.util.CommunityUtil;
 import com.newcoder.community.util.MailClient;
 import com.newcoder.community.util.RedisKeyUtil;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -33,11 +37,14 @@ public class UserService implements CommuityConstant {
     //private LoginTicketMapper loginTicketMapper;
     @Autowired
     private RedisTemplate redisTemplate;
+    @Autowired
+    private UserServiceFeign userServiceFeign;
     @Value("${community.path.domain}")
     private String domain;
     @Value("${server.servlet.context-path}")
     private String contextPath;
 
+    private static final Logger logger= LoggerFactory.getLogger(UserService.class);
     public User findUserById(int id){
         //return  userMapper.selectById(id);
         //优化：redis缓存中获取数据
@@ -49,60 +56,22 @@ public class UserService implements CommuityConstant {
     }
     //注册
     public Map<String,Object> register(User user){
-        Map<String,Object> map=new HashMap<>();
-        //空值处理
-        if(user==null){
-            throw new IllegalArgumentException("参数不能为空");
-        }
-        //username是否为空
-        if(StringUtils.isBlank(user.getUsername())){
-            map.put("usernameMsg","账号不能为空！");
+        Map<String,Object> map=userServiceFeign.registerByUser(user);
+        if(!map.containsKey("userMsg")){
             return map;
         }
-        //password是否为空
-        if(StringUtils.isBlank(user.getPassword())){
-            map.put("passwordMsg","密码不能为空！");
-            return map;
-        }
-        //email是否为空
-        if(StringUtils.isBlank(user.getEmail())){
-            map.put("emailMsg","邮箱不能为空！");
-            return map;
-        }
-        //验证账号是否已经存在
-        User u=userMapper.selectByName(user.getUsername());
-        if(u!=null){
-            map.put("usernameMsg","该账号已存在");
-            return map;
-        }
-        //验证邮箱是否已经存在
-        u=userMapper.selectByEmail(user.getEmail());
-        if(u!=null){
-            map.put("emailMsg","该邮箱已被注册");
-            return map;
-        }
-        //注册用户，将用户信息存到数据库里
-        //对密码加密
-        user.setSalt(CommunityUtil.generateUUID().substring(0,5));
-        user.setPassword(CommunityUtil.md5(user.getPassword()+user.getSalt()));
-        //设置其他字段
-        user.setType(0);
-        user.setStatus(0);//默认没有激活
-        user.setActivationCode(CommunityUtil.generateUUID());//激活码是一个随机字符串
-        user.setHeaderUrl(String.format("http://images.nowcoder.com/head/%dt.png",new Random().nextInt(1000)));
-        user.setCreateTime(new Date());
-        userMapper.insertUser(user);
         //给用户发送激活邮件
         //把要传给模板引擎的变量存到context里
         Context context=new Context();
-        context.setVariable("email",user.getEmail());
+        Map<String,Object> userMap= (Map<String, Object>) map.get("userMsg");
+        context.setVariable("email",userMap.get("email"));
         //http://localhost:8080/community/activation/101/code
         //101是用户id，code是激活码.调用user.insert之后就有id了，一开始是没有的，有了之后会对user进行回填（配置文件进行了配置）
-        String url=domain+contextPath+"/activation/"+user.getId()+"/"+user.getActivationCode();
+        String url=domain+contextPath+"/activation/"+userMap.get("id")+"/"+userMap.get("activationCode");
         context.setVariable("url",url);
         String content=templateEngine.process("/mail/activation",context);
-        mailClient.sendMail(user.getEmail(),"项目激活邮件",content);
-        return map;
+        mailClient.sendMail(userMap.get("email").toString(),"项目激活邮件",content);
+        return null;
     }
     //激活，返回激活状态
     public int activation(int userId,String code){
@@ -189,17 +158,18 @@ public class UserService implements CommuityConstant {
         //先更新mysql再删除redis缓存
 
         //return userMapper.updateHeader(userId,headUrl);
-        int rows=userMapper.updateHeader(userId,headUrl);
+        //微服务优化int rows=userMapper.updateHeader(userId,headUrl);
+        int rows=userServiceFeign.updateHeaderByuserId(userId,headUrl);
         clearCache(userId);
         return rows;
     }
 //修改密码
     public int updatePwd(int id,String newPwd){
-        return userMapper.updatePassword(id,newPwd);
+        return userServiceFeign.updatePwdById(id,newPwd);
     }
     //根据用户名查用户id
     public User findUserByName(String name){
-        return userMapper.selectByName(name);
+        return userServiceFeign.findUserByName(name);
     }
     //1、优先从缓存中取值
     private User getCache(int userId){
@@ -208,7 +178,10 @@ public class UserService implements CommuityConstant {
     }
     //2、取不到时，初始化缓存数据
     private User initCache(int userId){
-        User user=userMapper.selectById(userId);
+
+        //微服务优化User user=userMapper.selectById(userId);
+
+        User user=userServiceFeign.getUserById(userId);
         String redisKey=RedisKeyUtil.getUserKey(userId);
         redisTemplate.opsForValue().set(redisKey,user,3600, TimeUnit.SECONDS);
         return user;
